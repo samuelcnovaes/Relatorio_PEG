@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório do PEG - STJ PRÓ-SER (Multi-PEG Dinâmico)</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' );
+    
+    /* === GERAL === */
+    body{font-family:'Inter',Arial,sans-serif;font-size:12px;background:#f5f7fa;margin:20px;color:#333}
+    
+    /* Esconde elementos na impressão */
+    @media print {
+        body { background: #fff; margin: 0; padding: 0; }
+        .no-print, .peg-box, textarea, .botoes-acao, .footer-security, #painelFiltro { display: none !important; }
+        .card, .resumo { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .cab-guia th, .cab-evento th { position: static !important; }
+    }
+
+    textarea{width:100%;height:150px;font-family:Consolas,monospace;padding:10px;border-radius:8px;border:1px solid #ccc;box-sizing:border-box; font-size: 11px;}
+    
+    /* BOTÕES */
+    button{padding:8px 16px;border-radius:6px;border:none;font-weight:600;cursor:pointer;transition:all .2s; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; height: 38px;} 
+    .btn-primary { background:#2563eb;color:#fff; }
+    .btn-primary:hover{background:#1e4ed8}
+    .btn-secondary { background:#fff; border: 1px solid #ccc; color: #333; }
+    .btn-secondary:hover { background:#f1f5f9; }
+    
+    /* INPUTS E SELECTS */
+    input, select {padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1; height: 38px; box-sizing: border-box;}
+    input { width:220px; }
+    select { width: 180px; cursor: pointer; background-color: #fff; }
+    
+    .peg-box{background:#fff;border-radius:10px;padding:12px;margin-bottom:14px;display:flex;align-items:flex-end;gap:14px;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+    .peg-box label{font-size:11px;color:#475569;display:block;margin-bottom:4px; font-weight: 600;}
+    
+    .botoes-acao{display:flex;gap:10px;margin:12px 0; align-items: flex-end;} 
+    .campo-controle { display: flex; flex-direction: column; }
+    .campo-controle label { font-size:11px; color:#475569; margin-bottom:4px; font-weight: 600; }
+
+    /* PAINEL DE FILTRO */
+    .painel-filtro {
+        background: #dbeafe;
+        border: 1px solid #bfdbfe;
+        color: #1e40af;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none; 
+        align-items: center;
+        gap: 15px;
+    }
+    .painel-filtro select {
+        border-color: #3b82f6;
+        color: #1e3a8a;
+        font-weight: 600;
+        width: 250px;
+    }
+    
+    /* RESUMO */
+    .resumo{background:#fff;border-radius:12px;padding:14px;margin:10px 0 20px;box-shadow:0 4px 12px rgba(0,0,0,.06); border-left: 5px solid #2563eb;}
+    .resumo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .resumo-card{background:#f8fafc;border-radius:10px;padding:12px;border:1px solid #e5e7eb}
+    .resumo-card h3{margin:0 0 8px;font-size:13px;color:#1e3a8a}
+    .resumo-card .linha{margin-bottom:4px}
+    .resumo-card ul{margin:0;padding-left:16px}
+    .ano-maior{color:#b91c1c;font-weight:700}
+    
+    .card{background:#fff;border-radius:14px;padding:14px;margin-bottom:18px;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+    
+    /* TABELA */
+    table{width:100%;border-collapse:collapse; table-layout: fixed;} 
+    td { padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+
+    th {
+        padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; font-weight: 700; user-select: none;
+        position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border-bottom: 2px solid #ccc;
+    }
+    .cab-guia th { background: #e5e7eb; color: #111; }
+    .cab-evento th { background: #f1f5f9; color: #333; }
+
+    .resizer{position:absolute;top:0;right:0;width:5px;cursor:col-resize;height:100%;background:rgba(0,0,0,0.1)}
+    .valor{text-align:right}
+    
+    /* ALERTAS E TAGS */
+    .linha-beneficiario{background:#eff6ff; font-weight:500; color: #1e3a8a;} 
+    .internacao{background:#fde68a!important;color:#78350f;font-weight:600}
+    .eps{background:#0f172a!important;color:#fff!important}
+    .eps .valor{color:#e0f2fe}
+    .badge-eps{background:#2563eb;color:#fff;font-size:10px;padding:2px 6px;border-radius:6px;margin-left:6px;font-weight:600}
+    .evento-eps{background:#fee2e2}
+    .pf-zero{color:#b91c1c;font-weight:700}
+    .tag-pf{background:#dc2626;color:#fff;font-size:10px;padding:2px 6px;border-radius:6px;margin-left:6px;font-weight:600}
+    .glosa{background:#fff5f5;color:#b91c1c;font-weight:500}
+    
+    .celula-alerta { background-color: #fecaca !important; color: #991b1b !important; font-weight: 700; }
+    .tag-alerta { display: inline-block; background: #dc2626; color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 600; }
+    .tratamento-alerta { background-color: #ffedd5 !important; color: #c2410c !important; font-weight: 600; }
+    .tag-atencao { display: inline-block; background: #ea580c; color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 600; text-transform: uppercase; }
+    .tag-reconsiderar { display: inline-block; background: #7c3aed; color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 600; text-transform: uppercase; }
+    .tag-internacao { display: inline-block; background: #b91c1c; color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 4px; margin-left: 6px; vertical-align: middle; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+
+    .tag-prescricao { 
+        display: inline-block; 
+        background: #b91c1c; 
+        color: #fff; 
+        font-size: 10px; 
+        padding: 4px 8px; 
+        border-radius: 4px; 
+        margin-top: 5px; 
+        margin-left: 0;  
+        vertical-align: middle; 
+        font-weight: 700; 
+        text-transform: uppercase; 
+        box-shadow: 0 2px 4px rgba(185, 28, 28, 0.4);
+        animation: pulse 2s infinite;
+        white-space: normal; 
+        line-height: 1.2;
+    }
+
+    .tag-exercicio {
+        display: inline-block;
+        background: #f59e0b;
+        color: #fff;
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-top: 5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.4);
+        white-space: normal;
+        line-height: 1.2;
+    }
+
+    .tag-glosa-alta {
+        display: inline-block;
+        color: #dc2626; 
+        font-size: 14px;
+        margin-left: 4px;
+        font-weight: 700;
+        vertical-align: middle;
+        cursor: help;
+    }
+
+    .tag-incompativel {
+        display: inline-block;
+        background: #881337; 
+        color: #fff;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        font-weight: 700;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(136, 19, 55, 0.3);
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    /* LARGURAS */
+    .cab-guia th:nth-child(1) { width: 35%; } 
+    .cab-guia th:nth-child(2) { width: 100px; } 
+    .cab-guia th:nth-child(3) { width: 110px; } 
+    .cab-guia th:nth-child(4) { width: 120px; } 
+    .cab-guia th:nth-child(5) { width: 120px; } 
+    .cab-guia th:nth-child(6) { width: 80px; }  
+    .cab-guia th:nth-child(7), .cab-guia th:nth-child(8), .cab-guia th:nth-child(9), .cab-guia th:nth-child(10) { width: 85px; } 
+    .cab-guia th:last-child { width: 80px; text-align: center; } 
+
+    .cab-evento th:nth-child(1) { width: 85px; } 
+    .cab-evento th:nth-child(2) { width: 45px; } 
+    .cab-evento th:nth-child(3) { width: 70px; } 
+    .cab-evento th:nth-child(4) { width: 380px; } 
+    .cab-evento .valor { width: 75px; }
+    .cab-evento th:last-child { width: 80px; text-align: center; } 
+
+    .footer-security { text-align: center; margin-top: 30px; color: #64748b; font-size: 11px; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+    .footer-security span { background: #dbeafe; padding: 2px 6px; border-radius: 4px; color: #1e40af; font-weight: 600; }
+
+    /* MODAL AJUDA */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+    .modal-content { background: #fff; margin: 5% auto; padding: 20px; width: 500px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .modal h2 { margin-top: 0; color: #1e3a8a; }
+
+    /* BOTÃO VOLTAR AO TOPO */
+    .btn-topo {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        height: 45px; 
+        background: #2563eb;
+        color: #fff;
+        border-radius: 30px; 
+        border: none;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 20px; 
+        gap: 8px; 
+    }
+
+    .btn-topo.mostrar {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .btn-topo:hover {
+        background: #1e4ed8;
+        transform: scale(1.05);
+    }
+</style>
+</head>
+<body>
+
+<div class="peg-box no-print">
+    <div style="flex-grow: 1;">
+        <label>1. Nº do PEG (Individual ou Lote)</label>
+        <div style="display:flex; gap:10px;">
+            <input id="peg" placeholder="Ex: 170680; 170681">
+            <button class="btn-primary" onclick="copiarSQL()">📋 Copiar SQL</button>
+        </div>
+    </div>
+    
+    <div>
+        <button class="btn-secondary" onclick="toggleAjuda()">❓ Como usar</button>
+    </div>
+</div>
+
+<textarea id="input" class="no-print" placeholder="2. Cole aqui o RESULTADO do SELECT gerado..."></textarea>
+
+<div class="botoes-acao no-print">
+    <div class="campo-controle">
+        <label>3. Ordenação</label>
+        <select id="tipoOrdenacao">
+            <option value="sequencial" selected>Sequencial (Padrão)</option>
+            <option value="alfabetica">Ordem Alfabética</option>
+            <option value="glosa">⚠️ Com Glosa Primeiro</option>
+        </select>
+    </div>
+
+    <button class="btn-primary" onclick="render()">🚀 Gerar Relatório</button>
+    <button class="btn-secondary" onclick="limparTudo()">🧹 Limpar</button>
+    <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir / PDF</button>
+</div>
+
+<div id="painelFiltro" class="painel-filtro no-print">
+    <label for="filtroPegSelect">📂 <b>Trabalhando no PEG:</b></label>
+    <select id="filtroPegSelect" onchange="atualizarFiltroVisual()">
+        <option value="todos">Mostrar Todos</option>
+    </select>
+    <span style="font-size: 11px; color: #1e3a8a;">(Selecione um PEG para ver o Resumo dele)</span>
+</div>
+
+<div id="resumo" class="resumo" style="display:none"></div>
+<div id="saida"></div>
+
+<div class="footer-security no-print">
+    🔒 <span>Segurança:</span> O processamento é realizado 100% no seu navegador. Nenhum dado deste relatório é enviado para servidores externos.
+</div>
+
+<button id="btnTopo" class="btn-topo no-print" onclick="subirTopo()">
+    ⬆ Voltar ao topo
+</button>
+
+<div id="modalAjuda" class="modal no-print">
+    <div class="modal-content">
+        <h2>Como usar</h2>
+        <ol>
+            <li>Digite o número do <b>PEG</b>. Para lote, separe por <b>; (ponto e vírgula)</b>. Ex: <code>170680; 170681</code>.</li>
+            <li>Clique em <b>Copiar SQL</b>.</li>
+            <li>No Benner, execute a consulta e cole o resultado.</li>
+            <li>Clique em <b>Gerar Relatório</b>.</li>
+            <li>Se usar múltiplos PEGs, aparecerá um filtro azul no topo. Selecione um PEG para ver os dados.</li>
+        </ol>
+        <button class="btn-primary" onclick="toggleAjuda()">Fechar</button>
+    </div>
+</div>
+
+<script>
+// VARIAVEL GLOBAL PARA ARMAZENAR DADOS DE RESUMO POR PEG
+let GLOBAL_DADOS_RESUMO = {};
+
+const SQL_BASE=`SELECT SAM_BENEFICIARIO.NOME BENEFICIARIO, A.ORDEM, SAM_BENEFICIARIO.BENEFICIARIO MATRICULA, A.DATAATENDIMENTO, B.HANDLE, B.ORDEM, SAM_TGE.ESTRUTURA ESTRUTURA, B.DATAATENDIMENTO, B.QTDAPRESENTADA, B.VALORAPRESENTADO, B.QTDGLOSADA, B.VALORGLOSADO, B.QTDPAGTO, B.VALORPAGTO, B.VALORCALCPAGTO, B.VALORPFORIGINAL, SAM_GRAU.DESCRICAO GRAU, SAM_GRAU.Z_DESCRICAO, B.EVENTO EVENTOHANDLE, REPLACE(REPLACE(REPLACE(CAST(SAM_TGE.DESCRICAO AS VARCHAR(100)), CHAR(13), ' '), CHAR(10), ' '), CHAR(9), ' ') EVENTO, C.HANDLE, SAM_MOTIVOGLOSA.DESCRICAO MOTIVOGLOSA, REPLACE(REPLACE(REPLACE(CAST(C.COMPLEMENTO AS VARCHAR(100)), CHAR(13), ' '), CHAR(10), ' '), CHAR(9), ' ') COMPLEMENTO, C.QTDGLOSA, C.VALORGLOSA, C.QTDRECONSIDERADA, C.VALORRECONSIDERADO, C.MOTIVORECONSIDERACAO MOTIVORECONSIDERACAOHANDLE, SAM_MOTIVORECONSIDERACAO.DESCRICAO MOTIVORECONSIDERACA, NULL REGIMEATENDIMENTO, NULL TIPOTRATAMENTO, NULL CONDICAOATENDIMENTO, NULL DATAPREVISAOTERMINOTRATAMENTO, NULL DATARECEBIMENTO, NULL PEG, NULL IDENTIFICADORPAGAMENTO, NULL OBSERVACAOSTJ, NULL RECEBEDOR, NULL TOTALINFORMADO, 2 TIPO_DADO FROM SAM_PEG G LEFT OUTER JOIN SAM_GUIA A ON (A.PEG = G.HANDLE) LEFT OUTER JOIN SAM_BENEFICIARIO SAM_BENEFICIARIO ON (SAM_BENEFICIARIO.HANDLE = A.BENEFICIARIO) LEFT OUTER JOIN SAM_GUIA_EVENTOS B ON A.HANDLE = B.GUIA LEFT OUTER JOIN SAM_TGE SAM_TGE ON (SAM_TGE.HANDLE = B.EVENTO) LEFT OUTER JOIN SAM_GRAU SAM_GRAU ON (SAM_GRAU.HANDLE = B.GRAU) LEFT OUTER JOIN SAM_GUIA_EVENTOS_GLOSA C ON B.HANDLE = C.GUIAEVENTO LEFT OUTER JOIN SAM_MOTIVOGLOSA SAM_MOTIVOGLOSA ON (SAM_MOTIVOGLOSA.HANDLE = C.MOTIVOGLOSA) LEFT OUTER JOIN SAM_MOTIVORECONSIDERACAO SAM_MOTIVORECONSIDERACAO ON (SAM_MOTIVORECONSIDERACAO.HANDLE = C.MOTIVORECONSIDERACAO) WHERE ( G.PEG IN ({{PEG}}) AND C.VALORRECONSIDERADO <> C.VALORGLOSA ) UNION SELECT SAM_BENEFICIARIO.NOME BENEFICIARIO, A.ORDEM, SAM_BENEFICIARIO.BENEFICIARIO MATRICULA, A.DATAATENDIMENTO, NULL HANDLE, NULL ORDEM, NULL ESTRUTURA, NULL DATAATENDIMENTO, NULL QTDAPRESENTADA, NULL VALORAPRESENTADO, NULL QTDGLOSADA, NULL VALORGLOSADO, NULL QTDPAGTO, NULL VALORPAGTO, NULL VALORCALCPAGTO, NULL VALORPFORIGINAL, NULL GRAU, NULL Z_DESCRICAO, NULL EVENTOHANDLE, NULL EVENTO, NULL HANDLE, NULL MOTIVOGLOSA, NULL COMPLEMENTO, NULL QTDGLOSA, NULL VALORGLOSA, NULL QTDRECONSIDERADA, NULL VALORRECONSIDERADO, NULL MOTIVORECONSIDERACAOHANDLE, NULL MOTIVORECONSIDERACA, SAM_REGIMEATENDIMENTO.DESCRICAO, SAM_TIPOTRATAMENTO.DESCRICAO, SAM_CONDATENDIMENTO.DESCRICAO, A.DATAPREVISAOTERMINOTRATAMENTO, G.DATARECEBIMENTO DATARECEBIMENTO, G.PEG PEG, G.IDENTIFICADORPAGAMENTO IDENTIFICADORPAGAMENTO, G.K_OBSERVACAOSTJ OBSERVACAOSTJ, SAM_PRESTADOR.NOME RECEBEDOR, G.TOTALINFORMADO, 0 TIPO_DADO FROM SAM_PEG G LEFT OUTER JOIN SAM_GUIA A ON (A.PEG = G.HANDLE) LEFT OUTER JOIN SAM_BENEFICIARIO SAM_BENEFICIARIO ON (SAM_BENEFICIARIO.HANDLE = A.BENEFICIARIO) LEFT OUTER JOIN SAM_REGIMEATENDIMENTO SAM_REGIMEATENDIMENTO ON (SAM_REGIMEATENDIMENTO.HANDLE = A.REGIMEATENDIMENTO) LEFT OUTER JOIN SAM_TIPOTRATAMENTO SAM_TIPOTRATAMENTO ON (SAM_TIPOTRATAMENTO.HANDLE = A.TIPOTRATAMENTO) LEFT OUTER JOIN SAM_CONDATENDIMENTO SAM_CONDATENDIMENTO ON (SAM_CONDATENDIMENTO.HANDLE = A.CONDICAOATENDIMENTO) LEFT OUTER JOIN SAM_PRESTADOR SAM_PRESTADOR ON (SAM_PRESTADOR.HANDLE = G.RECEBEDOR) WHERE ( G.PEG IN ({{PEG}}) ) UNION SELECT SAM_BENEFICIARIO.NOME BENEFICIARIO, A.ORDEM, SAM_BENEFICIARIO.BENEFICIARIO MATRICULA, A.DATAATENDIMENTO, B.HANDLE, B.ORDEM, SAM_TGE.ESTRUTURA ESTRUTURA, B.DATAATENDIMENTO, B.QTDAPRESENTADA, B.VALORAPRESENTADO, B.QTDGLOSADA, B.VALORGLOSADO, B.QTDPAGTO, B.VALORPAGTO, B.VALORCALCPAGTO, B.VALORPFORIGINAL, SAM_GRAU.DESCRICAO GRAU, SAM_GRAU.Z_DESCRICAO, B.EVENTO EVENTOHANDLE, REPLACE(REPLACE(REPLACE(CAST(SAM_TGE.DESCRICAO AS VARCHAR(100)), CHAR(13), ' '), CHAR(10), ' '), CHAR(9), ' ') EVENTO, NULL HANDLE, NULL MOTIVOGLOSA, NULL COMPLEMENTO, NULL QTDGLOSA, NULL VALORGLOSA, NULL QTDRECONSIDERADA, NULL VALORRECONSIDERADO, NULL MOTIVORECONSIDERACAOHANDLE, NULL MOTIVORECONSIDERACA, NULL REGIMEATENDIMENTO, NULL TIPOTRATAMENTO, NULL CONDICAOATENDIMENTO, NULL DATAPREVISAOTERMINOTRATAMENTO, NULL DATARECEBIMENTO, NULL PEG, NULL IDENTIFICADORPAGAMENTO, NULL OBSERVACAOSTJ, NULL RECEBEDOR, NULL TOTALINFORMADO, 1 TIPO_DADO FROM SAM_PEG G LEFT OUTER JOIN SAM_GUIA A ON (A.PEG = G.HANDLE) LEFT OUTER JOIN SAM_BENEFICIARIO SAM_BENEFICIARIO ON (SAM_BENEFICIARIO.HANDLE = A.BENEFICIARIO) LEFT OUTER JOIN SAM_GUIA_EVENTOS B ON A.HANDLE = B.GUIA LEFT OUTER JOIN SAM_TGE SAM_TGE ON (SAM_TGE.HANDLE = B.EVENTO) LEFT OUTER JOIN SAM_GRAU SAM_GRAU ON (SAM_GRAU.HANDLE = B.GRAU) WHERE ( G.PEG IN ({{PEG}}) )  ORDER BY A.ORDEM, BENEFICIARIO, A.DATAATENDIMENTO, B.ORDEM,TIPO_DADO
+`;
+
+function copiarSQL() {
+    const pegInput = document.getElementById("peg");
+    let t = pegInput.value.trim();
+    if (!t) return void alert("Informe o(s) número(s) do PEG.");
+    t = t.replace(/[\n\s]+/g, ",").replace(/,+/g, ",");
+    if (t.endsWith(",")) t = t.slice(0, -1);
+    const textToCopy = SQL_BASE.replaceAll("{{PEG}}", t);
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            document.getElementById("input").value = ""; alert("Código SQL (Lote) copiado!");
+        }).catch(() => fallbackCopy(textToCopy));
+    } else fallbackCopy(textToCopy);
+}
+
+function fallbackCopy(text) {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { if(document.execCommand('copy')) { document.getElementById("input").value = ""; alert("Código SQL (Lote) copiado!"); } } catch (e) { alert("Erro ao copiar."); }
+    document.body.removeChild(ta);
+}
+
+function toggleAjuda() { const m = document.getElementById("modalAjuda"); m.style.display = m.style.display === "block" ? "none" : "block"; }
+function limparTudo() {
+    document.getElementById("input").value = ""; document.getElementById("saida").innerHTML = "";
+    document.getElementById("resumo").innerHTML = ""; document.getElementById("resumo").style.display = "none";
+    document.getElementById("peg").value = ""; document.getElementById("painelFiltro").style.display = "none";
+    GLOBAL_DADOS_RESUMO = {};
+}
+
+function moeda(t){return t?parseFloat(t.replace(/\./g,"").replace(",","."))||0:0}
+function fmt(t){return t.toLocaleString("pt-BR",{minimumFractionDigits:2})}
+function parseData(str) { if(!str)return null; const p = str.split('/'); return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : null; }
+function tornarColunasAjustaveis(t){const e=t.querySelectorAll("th, td");e.forEach(t=>{if(t.nextElementSibling){const n=document.createElement("div");n.className="resizer",t.appendChild(n);let o=0,d=0;const l=function(e){o=e.clientX;const l=window.getComputedStyle(t);d=parseInt(l.width,10),document.addEventListener("mousemove",a),document.addEventListener("mouseup",s),n.style.background="#2563eb"},a=function(e){const n=e.clientX-o;t.style.width=`${d+n}px`,t.style.whiteSpace="normal"},s=function(){document.removeEventListener("mousemove",a),document.removeEventListener("mouseup",s),n.style.background="rgba(0,0,0,0.1)"};n.addEventListener("mousedown",l)}})}
+
+// --- FUNÇÃO PARA ATUALIZAR VISUAL E RESUMO ---
+function atualizarFiltroVisual() {
+    const pegSelecionado = document.getElementById("filtroPegSelect").value;
+    const cards = document.querySelectorAll(".card");
+    const divResumo = document.getElementById("resumo");
+    
+    // Contagem de PEGs reais (excluindo 'todos')
+    const totalPegsReais = Object.keys(GLOBAL_DADOS_RESUMO).filter(k => k !== 'todos').length;
+
+    // 1. Filtra os Cards e Resumo
+    if (pegSelecionado === "todos") {
+        cards.forEach(card => card.style.display = "block");
+        
+        // REGRA: Se tiver apenas 1 PEG, mostra o resumo. Se > 1, esconde.
+        if (totalPegsReais === 1) {
+            divResumo.style.display = "block";
+            // Pega o único PEG disponível
+            const unicoPeg = Object.keys(GLOBAL_DADOS_RESUMO).find(k => k !== 'todos');
+            if(unicoPeg) renderizarConteudoResumo(unicoPeg); 
+        } else {
+            divResumo.style.display = "none";
+        }
+        return;
+    } else {
+        cards.forEach(card => card.style.display = (card.dataset.peg === pegSelecionado) ? "block" : "none");
+        divResumo.style.display = "block"; 
+        renderizarConteudoResumo(pegSelecionado);
+    }
+}
+
+// Helper para renderizar o HTML do resumo
+function renderizarConteudoResumo(chavePeg) {
+    const divResumo = document.getElementById("resumo");
+    if (!GLOBAL_DADOS_RESUMO[chavePeg]) return;
+
+    const dados = GLOBAL_DADOS_RESUMO[chavePeg];
+    const info = dados.info || {};
+    
+    const tituloPeg = (chavePeg === 'todos') ? info.peg : chavePeg;
+
+    let html = `<div class="resumo-grid">`;
+    // Card Dados
+    html += `<div class="resumo-card"><h3>📌 Dados do Processo (PEG ${tituloPeg})</h3>
+             <div class="linha"><b>Data Recebimento:</b> ${info.dataReceb || '-'}</div>
+             <div class="linha"><b>PEG:</b> ${info.peg || '-'}</div>
+             <div class="linha"><b>Processo:</b> ${info.processo || '-'}</div>
+             <div class="linha"><b>Prestador:</b> ${info.prestador || '-'}</div>
+             <div class="linha"><b>Observação:</b> ${info.obs || '-'}</div>
+             <div class="linha"><b>Valor Informado:</b> ${fmt(dados.totalInformado)}</div>
+             <div class="linha"><b>Valor Pago:</b> ${fmt(dados.totalPago)}</div></div>`;
+
+    // Card Anos
+    const anosKeys = Object.keys(dados.anos).sort();
+    if (anosKeys.length > 1) {
+        html += `<div class="resumo-card"><h3>📅 Exercícios distintos</h3><ul>`;
+        const maiorAno = Math.max(...anosKeys.map(x=>parseInt(x)));
+        anosKeys.forEach(a => {
+            const anoClass = parseInt(a) === maiorAno ? 'ano-maior' : '';
+            const listaGuias = Array.from(dados.anos[a]);
+            const agrupaBenef = {};
+            listaGuias.forEach(item => {
+                const parts = item.split(' - ');
+                const g = parts[0].replace('Guia ', '');
+                const b = parts[1];
+                if(!agrupaBenef[b]) agrupaBenef[b] = [];
+                agrupaBenef[b].push(g);
+            });
+            Object.keys(agrupaBenef).forEach(benef => {
+                html += `<li class="${anoClass}">Guias <b>${agrupaBenef[benef].join(', ')}</b> — ${benef} (${a})</li>`;
+            });
+        });
+        html += `</ul></div>`;
+    }
+
+    // Card EPS
+    const listaEps = Array.from(dados.eps);
+    if (listaEps.length > 0) {
+        html += `<div class="resumo-card"><h3>🧾 Beneficiários EPS</h3><ul>`;
+        listaEps.forEach(b => html += `<li>${b}</li>`);
+        html += `</ul></div>`;
+    }
+    
+    html += `</div>`;
+    divResumo.innerHTML = html;
+}
+
+function render() {
+    try {
+        const rawLines = document.getElementById("input").value.trim().split(/\r?\n/);
+        const saida = document.getElementById("saida");
+        const resumo = document.getElementById("resumo");
+        const tipoOrdenacao = document.getElementById("tipoOrdenacao").value; 
+        const painelFiltro = document.getElementById("painelFiltro");
+        const selectFiltro = document.getElementById("filtroPegSelect");
+
+        saida.innerHTML = ""; resumo.innerHTML = ""; resumo.style.display = "none"; painelFiltro.style.display = "none";
+        // INICIALIZA GLOBAL CORRETAMENTE, INCLUINDO 'TODOS' PARA EVITAR ERRO
+        GLOBAL_DADOS_RESUMO = { 
+            'todos': { totalPago: 0, totalInformado: 0, anos: {}, eps: new Set(), info: {} } 
+        };
+
+        if (rawLines.length <= 1) { alert("Cole o resultado."); return; }
+
+        let guiasObjetos = [], guiaAtualObj = null, listaPegs = new Set();
+
+        rawLines.slice(1).forEach(l => {
+            const c = l.split("\t");
+            if (c.length < 40) return;
+            const tipo = c[39]; 
+            if (tipo === "0") {
+                const p = c[34] || "Desc";
+                listaPegs.add(p);
+                // INICIA OBJETO GUIA COM FLAG temInternacao
+                const regime = (c[29]||"").toLowerCase();
+                // Verificação estrita: só marca se for explicitamente 'internação'
+                const isInternacao = regime.includes("internação") || regime.includes("internacao");
+
+                guiaAtualObj = { 
+                    cabecalho: l, 
+                    nome: c[0].trim(), 
+                    ordem: parseInt(c[1])||0, 
+                    linhasEventos: [], 
+                    temGlosa: false, 
+                    peg: p,
+                    temInternacao: isInternacao 
+                };
+                guiasObjetos.push(guiaAtualObj);
+            } else if (guiaAtualObj) {
+                guiaAtualObj.linhasEventos.push(l);
+                if (tipo === "2" || moeda(c[11]) > 0) guiaAtualObj.temGlosa = true;
+                if (tipo === "1") {
+                    const desc = (c[19]||"").toLowerCase();
+                    if (desc.match(/diária|diaria|internado|visita hospitalar/)) {
+                        guiaAtualObj.temInternacao = true;
+                    }
+                }
+            }
+        });
+
+        // Ordenação
+        if (tipoOrdenacao === "glosa") {
+            guiasObjetos.forEach(guia => {
+                let grp = [], cur = null;
+                guia.linhasEventos.forEach(line => {
+                    const c = line.split("\t");
+                    if (c[39] === "1") { cur = { l: [line], g: moeda(c[11])>0 }; grp.push(cur); }
+                    else if (c[39] === "2" && cur) { cur.l.push(line); cur.g = true; }
+                });
+                grp.sort((a,b) => (a.g && !b.g) ? -1 : (!a.g && b.g) ? 1 : 0);
+                guia.linhasEventos = grp.flatMap(x => x.l);
+            });
+            guiasObjetos.sort((a,b) => (a.temGlosa && !b.temGlosa) ? -1 : (!a.temGlosa && b.temGlosa) ? 1 : a.ordem - b.ordem);
+        } else if (tipoOrdenacao === "alfabetica") guiasObjetos.sort((a,b) => a.nome.localeCompare(b.nome));
+        else guiasObjetos.sort((a,b) => a.ordem - b.ordem);
+
+        // --- PREENCHIMENTO DO SELECT COM ORDEM DO INPUT ---
+        if (listaPegs.size > 1) {
+             selectFiltro.innerHTML = '<option value="" disabled selected>Selecione um PEG...</option>';
+        } else {
+             selectFiltro.innerHTML = ''; 
+        }
+        
+        const rawInput = document.getElementById("peg").value;
+        // Tratamento para separadores ; ou ,
+        const inputOrder = rawInput.split(/[\s,;]+/).filter(x => x.trim() !== "");
+        const addedPegs = new Set();
+
+        inputOrder.forEach(p => {
+            if (listaPegs.has(p)) { addOption(p); addedPegs.add(p); }
+        });
+        Array.from(listaPegs).sort().forEach(p => {
+            if (!addedPegs.has(p)) addOption(p);
+        });
+
+        function addOption(val) {
+            const opt = document.createElement("option"); opt.value = val; opt.text = "PEG " + val; selectFiltro.appendChild(opt);
+            GLOBAL_DADOS_RESUMO[val] = { totalPago: 0, totalInformado: 0, anos: {}, eps: new Set(), info: {} };
+        }
+
+        if (listaPegs.size > 1) {
+            painelFiltro.style.display = "flex";
+        } else {
+            painelFiltro.style.display = "none";
+        }
+
+        let tabelaEvento = null, linhaValores = null, sA=0, sG=0, sP=0, sPF=0; 
+        const epsList = []; 
+        let guiaAno = "", ultimoGuiaOrdem = "";
+
+        const finalizarCard = () => {
+            if(!linhaValores) return;
+            linhaValores.children[6].innerText = fmt(sA);
+            linhaValores.children[7].innerText = fmt(sG);
+            linhaValores.children[8].innerText = fmt(sP);
+            linhaValores.children[9].innerText = fmt(sPF);
+            let pfTxt = sP ? ((sPF/sP)*100).toFixed(2)+"%" : "0%";
+            if (linhaValores.dataset.eps === "true" && sPF === 0) pfTxt += ' <span class="tag-pf">PF Zerada</span>';
+            linhaValores.children[10].innerHTML = pfTxt;
+        };
+
+        const tratEspeciais = ["HEMODIÁLISE", "QUIMIOTERAPIA", "RADIOTERAPIA", "TERAPIA IMUNOBIOLÓGICA", "TFD", "VACINA SEM COPARTICIPAÇÃO"];
+
+        // RENDERIZAÇÃO
+        guiasObjetos.forEach(obj => {
+            const l = obj.cabecalho;
+            const c = l.split("\t");
+            const ordemGuia = c[1].trim();
+            
+            const pegAtual = obj.peg;
+            const beneficiario = c[0].trim();
+            const matricula = c[2];
+            const data = c[3];
+            const ano = data.slice(-4);
+            const isEps = matricula.startsWith("05") || matricula.startsWith("06");
+            const vlrInformado = moeda(c[38]);
+
+            const target = GLOBAL_DADOS_RESUMO[pegAtual];
+            target.info = { dataReceb: c[33], peg: c[34], processo: c[35], obs: c[36], prestador: c[37] };
+            target.totalInformado = vlrInformado; 
+            
+            // Cópia para o resumo "Todos" (caso de 1 PEG)
+            // Usamos Object.assign para não sobrescrever a referência 'pegAtual'
+            GLOBAL_DADOS_RESUMO['todos'].info = Object.assign({}, target.info);
+            GLOBAL_DADOS_RESUMO['todos'].info.peg = "Múltiplos";
+            
+            if (ano) {
+                const strGuia = `Guia ${ordemGuia} - ${beneficiario}`;
+                if (!target.anos[ano]) target.anos[ano] = new Set();
+                target.anos[ano].add(strGuia);
+                if (!GLOBAL_DADOS_RESUMO['todos'].anos[ano]) GLOBAL_DADOS_RESUMO['todos'].anos[ano] = new Set();
+                GLOBAL_DADOS_RESUMO['todos'].anos[ano].add(strGuia);
+            }
+
+            if (isEps) {
+                const strEps = `${ordemGuia} - ${beneficiario} — ${matricula}`;
+                target.eps.add(strEps);
+                GLOBAL_DADOS_RESUMO['todos'].eps.add(strEps);
+            }
+
+            finalizarCard();
+            sA=0; sG=0; sP=0; sPF=0;
+            guiaAno = ano; 
+            
+            const tratamento = c[30] || 'N/A';
+            let tratHtml = tratamento, tratClass = "", pfClass = "";
+            if (tratEspeciais.some(t => tratamento.toUpperCase().includes(t))) {
+                tratHtml += ` <span class="tag-atencao">Atenção</span>`; tratClass = pfClass = "tratamento-alerta";
+            }
+            
+            let dataHtml = data;
+            const dtAtend = parseData(data), dtReceb = parseData(c[33]);
+            if(dtAtend && dtReceb) {
+                const d = new Date(dtAtend); d.setFullYear(d.getFullYear()+1);
+                if(dtReceb > d) dataHtml += `<br><span class="tag-prescricao">Glosar - Atendimento com mais de 1 ano - Edital 01/2022</span>`;
+            }
+
+            // DETECÇÃO DE EXERCÍCIO DISTINTO DENTRO DA GUIA
+            let temAnoDistinto = false;
+            obj.linhasEventos.forEach(lineEvt => {
+                const cEvt = lineEvt.split("\t");
+                if (cEvt[39] === "1") {
+                    const dtEvt = cEvt[7];
+                    if (dtEvt) {
+                        const aEvt = dtEvt.slice(-4);
+                        if (aEvt && ano && aEvt !== ano) temAnoDistinto = true;
+                    }
+                }
+            });
+            if (temAnoDistinto) {
+                dataHtml += `<br><span class="tag-exercicio">⚠️ Exercício Distinto</span>`;
+            }
+
+            const trClass = `linha-beneficiario ${isEps?"eps":""} ${c[29].toLowerCase()!=="ambulatorial"?"internacao":""}`;
+            const card = document.createElement("div"); card.className = "card"; card.dataset.peg = pegAtual;
+            saida.appendChild(card);
+
+            const tbl = document.createElement("table");
+            tbl.innerHTML = `<tr class="cab-guia"><th>Beneficiário</th><th>Data</th><th>Matrícula</th><th>Regime</th><th>Tratamento</th><th>Condição</th><th class="valor">Valor Apres.</th><th class="valor">Valor Glosa</th><th class="valor">Valor Pgto</th><th class="valor">Valor PF</th><th class="valor">PF Benner</th></tr><tr class="${trClass}" data-eps="${isEps}"><td>${ordemGuia} - <b>${beneficiario}</b></td><td>${dataHtml}</td><td>${matricula}${isEps?'<span class="badge-eps">EPS</span>':''}</td><td>${c[29]}</td><td class="${tratClass}">${tratHtml}</td><td>${c[31]||'N/A'}</td><td class="valor">-</td><td class="valor">-</td><td class="valor">-</td><td class="valor">-</td><td class="valor ${pfClass}">-</td></tr>`;
+            card.appendChild(tbl); 
+            tornarColunasAjustaveis(tbl.rows[0]);
+            
+            linhaValores = tbl.rows[1];
+            tabelaEvento = document.createElement("table");
+            tabelaEvento.innerHTML = `<tr class="cab-evento"><th>Data</th><th>Ordem</th><th>Código</th><th>Evento</th><th class="valor">Qtd</th><th class="valor">Vlr Apres.</th><th class="valor">Qtd Glosa</th><th class="valor">Vlr Glosa</th><th class="valor">Qtd Pgto</th><th class="valor">Vlr Pgto</th><th class="valor">Vlr PF</th><th>Grau</th></tr>`;
+            card.appendChild(tabelaEvento);
+            tornarColunasAjustaveis(tabelaEvento.rows[0]);
+
+            obj.linhasEventos.forEach(lineEvt => {
+                const cEvt = lineEvt.split("\t");
+                const tipo = cEvt[39];
+                if (tipo === "1") {
+                    const vp = moeda(cEvt[13]);
+                    sA+=moeda(cEvt[9]); sG+=moeda(cEvt[11]); sP+=vp; sPF+=moeda(cEvt[15]);
+                    
+                    target.totalPago += vp;
+                    GLOBAL_DADOS_RESUMO['todos'].totalPago += vp;
+
+                    const tr = tabelaEvento.insertRow(); if (isEps) tr.className = "evento-eps";
+                    const dataEvt = cEvt[7]||"", anoEvt = dataEvt.slice(-4);
+                    let evtHtml = cEvt[19]||"";
+                    const evtLower = evtHtml.toLowerCase();
+                    
+                    if (evtLower.match(/diária|internado|visita hospitalar/)) evtHtml += ' <span class="tag-internacao">INTERNAÇÃO</span>';
+                    
+                    // LÓGICA DE INCOMPATIBILIDADE (CORRIGIDA)
+                    if (obj.temInternacao && evtLower.includes("consulta")) {
+                        evtHtml += ' <span class="tag-incompativel">Incompatível com internação</span>';
+                    }
+
+                    const cols = [cEvt[7], cEvt[5], cEvt[6], evtHtml, cEvt[8], cEvt[9], cEvt[10], cEvt[11], cEvt[12], cEvt[13], cEvt[15], cEvt[16]];
+                    cols.forEach((v, i) => {
+                        const td = tr.insertCell(); let val = v;
+                        if([5,7,9,10].includes(i)) {
+                            val = fmt(moeda(v));
+                            if(i===7 && moeda(v)>500) val += ' <span class="tag-glosa-alta" title="Glosa > 500">⚠️</span>';
+                        }
+                        if(i===0 && guiaAno && anoEvt && guiaAno!==anoEvt) { td.innerHTML=`${val} <span class="tag-alerta">⚠️</span>`; td.className="celula-alerta"; }
+                        else td.innerHTML = val;
+                        if(i>=4 && i<=10) td.classList.add("valor"); if(i===10 && moeda(v)===0) td.classList.add("pf-zero");
+                    });
+                } else if (tipo === "2") {
+                    const tr = tabelaEvento.insertRow(); tr.className = "glosa"; 
+                    tr.insertCell(); tr.insertCell(); tr.insertCell();
+                    const td = tr.insertCell(); td.colSpan=9;
+                    let txt = `⚠️ ${cEvt[21]} | Qtd ${cEvt[23]} | ${cEvt[24]}`;
+                    if(cEvt[21]&&cEvt[21].includes("QUANTIDADE ACIMA")) txt += ` <span class="tag-reconsiderar">Reconsiderar</span>`;
+                    td.innerHTML = txt;
+                }
+            });
+        });
+        finalizarCard();
+
+        let somaTotalInfo = 0;
+        Array.from(listaPegs).forEach(p => somaTotalInfo += GLOBAL_DADOS_RESUMO[p].totalInformado);
+        
+        // CORREÇÃO: Garante que 'todos' tenha o valor somado, caso precise ser usado como fallback
+        GLOBAL_DADOS_RESUMO['todos'].totalInformado = somaTotalInfo;
+
+        // Se for Single PEG, simula a seleção imediata
+        if (listaPegs.size === 1) {
+            const unicoPeg = Array.from(listaPegs)[0];
+            // Renderiza o resumo desse peg
+            resumo.style.display = "block"; // AQUI ESTAVA O NOME ERRADO
+            renderizarConteudoResumo(unicoPeg);
+        } else {
+            // Em lote, inicia limpo
+            atualizarFiltroVisual();
+        }
+
+    } catch (e) { alert("Erro: " + e.message); console.error(e); }
+}
+
+window.onscroll = function() { const btn = document.getElementById("btnTopo"); if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) btn.classList.add("mostrar"); else btn.classList.remove("mostrar"); };
+function subirTopo() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+</script>
+</body>
+</html>
