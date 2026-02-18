@@ -232,7 +232,7 @@
     <div style="flex-grow: 1;">
         <label>1. Nº do PEG (Individual ou Lote)</label>
         <div style="display:flex; gap:10px;">
-            <input id="peg" placeholder="Ex: 170680; 170681">
+            <input id="peg" placeholder="Ex: 170680; 170681 ou 170680 170681">
             <button class="btn-primary" onclick="copiarSQL()">📋 Copiar SQL</button>
         </div>
     </div>
@@ -280,13 +280,13 @@
 
 <div id="modalAjuda" class="modal no-print">
     <div class="modal-content">
-        <h2>Como usar</h2>
+        <h2>Como usar o Demonstrativo</h2>
         <ol>
-            <li>Digite o número do <b>PEG</b>. Para lote, separe por <b>; (ponto e vírgula)</b>. Ex: <code>170680; 170681</code>.</li>
+            <li>Digite o número do <b>PEG</b>. Para lote, separe por <b>; (ponto e vírgula)</b> ou um simples <b>espaço</b>. Ex: <code>170680; 170681</code> ou <code>170680 170681</code>.</li>
             <li>Clique em <b>Copiar SQL</b>.</li>
-            <li>No Benner, execute a consulta e cole o resultado.</li>
-            <li>Clique em <b>Gerar Relatório</b>.</li>
-            <li>Se usar múltiplos PEGs, aparecerá um filtro azul no topo. Selecione um PEG para ver os dados.</li>
+            <li>No Benner, entre na <b>Lupa</b> 🔍 (parte superior), execute a consulta clicando no <b>Raio amarelo</b> ⚡, após isso, clique no <b>4º ícone</b> e depois clique em <b>TAB</b>.</li>
+            <li>Cole o resultado no campo do gerador de relatório e clique em <b>Gerar Relatório</b>.</li>
+            <li>Se usar múltiplos PEGs, aparecerá um filtro azul no meio. Selecione um PEG para ver os dados.</li>
         </ol>
         <button class="btn-primary" onclick="toggleAjuda()">Fechar</button>
     </div>
@@ -430,7 +430,7 @@ function render() {
         const selectFiltro = document.getElementById("filtroPegSelect");
 
         saida.innerHTML = ""; resumo.innerHTML = ""; resumo.style.display = "none"; painelFiltro.style.display = "none";
-        // INICIALIZA GLOBAL CORRETAMENTE, INCLUINDO 'TODOS' PARA EVITAR ERRO
+        // INICIALIZA GLOBAL CORRETAMENTE
         GLOBAL_DADOS_RESUMO = { 
             'todos': { totalPago: 0, totalInformado: 0, anos: {}, eps: new Set(), info: {} } 
         };
@@ -448,7 +448,6 @@ function render() {
                 listaPegs.add(p);
                 // INICIA OBJETO GUIA COM FLAG temInternacao
                 const regime = (c[29]||"").toLowerCase();
-                // Verificação estrita: só marca se for explicitamente 'internação'
                 const isInternacao = regime.includes("internação") || regime.includes("internacao");
 
                 guiaAtualObj = { 
@@ -463,7 +462,11 @@ function render() {
                 guiasObjetos.push(guiaAtualObj);
             } else if (guiaAtualObj) {
                 guiaAtualObj.linhasEventos.push(l);
+                
+                // Checa Glosa
                 if (tipo === "2" || moeda(c[11]) > 0) guiaAtualObj.temGlosa = true;
+                
+                // Checa se é Evento de Internação
                 if (tipo === "1") {
                     const desc = (c[19]||"").toLowerCase();
                     if (desc.match(/diária|diaria|internado|visita hospitalar/)) {
@@ -497,7 +500,6 @@ function render() {
         }
         
         const rawInput = document.getElementById("peg").value;
-        // Tratamento para separadores ; ou ,
         const inputOrder = rawInput.split(/[\s,;]+/).filter(x => x.trim() !== "");
         const addedPegs = new Set();
 
@@ -554,8 +556,7 @@ function render() {
             target.info = { dataReceb: c[33], peg: c[34], processo: c[35], obs: c[36], prestador: c[37] };
             target.totalInformado = vlrInformado; 
             
-            // Cópia para o resumo "Todos" (caso de 1 PEG)
-            // Usamos Object.assign para não sobrescrever a referência 'pegAtual'
+            // Cópia para o resumo "Todos"
             GLOBAL_DADOS_RESUMO['todos'].info = Object.assign({}, target.info);
             GLOBAL_DADOS_RESUMO['todos'].info.peg = "Múltiplos";
             
@@ -638,7 +639,7 @@ function render() {
                     
                     if (evtLower.match(/diária|internado|visita hospitalar/)) evtHtml += ' <span class="tag-internacao">INTERNAÇÃO</span>';
                     
-                    // LÓGICA DE INCOMPATIBILIDADE (CORRIGIDA)
+                    // LÓGICA DE INCOMPATIBILIDADE
                     if (obj.temInternacao && evtLower.includes("consulta")) {
                         evtHtml += ' <span class="tag-incompativel">Incompatível com internação</span>';
                     }
@@ -668,15 +669,12 @@ function render() {
 
         let somaTotalInfo = 0;
         Array.from(listaPegs).forEach(p => somaTotalInfo += GLOBAL_DADOS_RESUMO[p].totalInformado);
-        
-        // CORREÇÃO: Garante que 'todos' tenha o valor somado, caso precise ser usado como fallback
         GLOBAL_DADOS_RESUMO['todos'].totalInformado = somaTotalInfo;
 
         // Se for Single PEG, simula a seleção imediata
         if (listaPegs.size === 1) {
             const unicoPeg = Array.from(listaPegs)[0];
-            // Renderiza o resumo desse peg
-            resumo.style.display = "block"; // AQUI ESTAVA O NOME ERRADO
+            resumo.style.display = "block";
             renderizarConteudoResumo(unicoPeg);
         } else {
             // Em lote, inicia limpo
